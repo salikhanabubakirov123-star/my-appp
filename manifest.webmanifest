@@ -1,0 +1,18 @@
+{
+  "name": "Гибрид Сейф — AES және RSA",
+  "short_name": "Гибрид Сейф",
+  "description": "AES-256-GCM және RSA-OAEP интерактивті зертханасы",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0a1020",
+  "theme_color": "#0a1020",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

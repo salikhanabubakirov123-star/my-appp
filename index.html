@@ -1,0 +1,811 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Гибрид Сейф</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0a1020">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Unbounded:wght@500;600&display=swap">
+<style>
+/* Layout: 3D сахна мен тақырып жоғарыда, одан кейін екі бағанды зертхана (кіріс | тізбек), төменде алгоритм, салыстыру және код.
+   Түс мағынасы: янтарь = AES (деректер), көгілдір-жасыл = RSA (кілт), бейтарап = хэш пен желі. */
+:root {
+  color-scheme: dark;
+  --bg: #0a1020;
+  --surface: #101a31;
+  --surface-2: #16233f;
+  --line: #25365a;
+  --fg: #e8eefb;
+  --muted: #93a4c6;
+  --dim: #5d70a0;
+  --aes: #f5b544;
+  --on-aes: #1b1300;
+  --rsa: #4fd1c5;
+  --on-rsa: #04201d;
+  --ok: #62d894;
+  --bad: #ff7a7a;
+  --focus: #9cc4ff;
+  --font-display: 'Unbounded', 'Rubik', system-ui, sans-serif;
+  --font-body: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    color-scheme: light;
+    --bg: #eef2f9;
+    --surface: #ffffff;
+    --surface-2: #e6ecf6;
+    --line: #cbd6e8;
+    --fg: #0f1a33;
+    --muted: #4d5d82;
+    --dim: #7f90b4;
+    --aes: #a85f00;
+    --on-aes: #ffffff;
+    --rsa: #00766d;
+    --on-rsa: #ffffff;
+    --ok: #17703a;
+    --bad: #b3261e;
+    --focus: #1d5fd1;
+  }
+}
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg: #eef2f9;
+  --surface: #ffffff;
+  --surface-2: #e6ecf6;
+  --line: #cbd6e8;
+  --fg: #0f1a33;
+  --muted: #4d5d82;
+  --dim: #7f90b4;
+  --aes: #a85f00;
+  --on-aes: #ffffff;
+  --rsa: #00766d;
+  --on-rsa: #ffffff;
+  --ok: #17703a;
+  --bad: #b3261e;
+  --focus: #1d5fd1;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.6;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 18px 72px;
+}
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.wrap { max-width: 1160px; margin-inline: auto; }
+main { display: grid; gap: clamp(56px, 9vw, 112px); }
+p { margin: 0; }
+h1, h2, h3 { margin: 0; text-wrap: balance; }
+code, pre { font-family: var(--font-mono); }
+a { color: inherit; }
+
+/* nav */
+.nav { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 24px; padding-bottom: 8px; }
+.brand { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; font-family: var(--font-display); font-weight: 600; font-size: .95rem; letter-spacing: -.01em; }
+.nav nav { display: flex; flex-wrap: wrap; gap: 4px 20px; }
+.nav nav a { font-family: var(--font-mono); font-size: .78rem; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); text-decoration: none; padding: 4px 0; }
+.nav nav a:hover { color: var(--fg); }
+
+/* hero */
+.hero { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: clamp(24px, 4vw, 56px); align-items: center; }
+.hero-copy { display: grid; gap: 22px; min-width: 0; }
+.eyebrow { font-family: var(--font-mono); font-size: .76rem; letter-spacing: .12em; text-transform: uppercase; color: var(--rsa); }
+h1 { font-family: var(--font-display); font-weight: 600; font-size: clamp(2rem, 5.2vw, 3.5rem); line-height: 1.1; letter-spacing: -.025em; }
+h1 .a { color: var(--aes); }
+h1 .r { color: var(--rsa); }
+.lede { color: var(--muted); max-width: 56ch; font-size: 1.05rem; }
+.cta { display: flex; flex-wrap: wrap; gap: 10px; }
+.specs { display: flex; flex-wrap: wrap; gap: 14px 0; margin: 4px 0 0; padding: 0; }
+.specs div { padding: 0 20px; border-left: 1px solid var(--line); min-width: 0; }
+.specs div:first-child { padding-left: 0; border-left: 0; }
+.specs dt { font-family: var(--font-mono); font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; color: var(--dim); }
+.specs dd { margin: 2px 0 0; font-weight: 500; font-size: .92rem; }
+
+.stage { position: relative; aspect-ratio: 1 / 1; min-height: 340px; border-radius: 20px; overflow: hidden;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--aes) 13%, transparent), transparent 72%); }
+.stage canvas { display: block; width: 100%; height: 100%; touch-action: pan-y; }
+.stage.nogl::after { content: "3D көрсету бұл құрылғыда қолжетімсіз"; position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); font-size: .85rem; }
+.legend { position: absolute; left: 14px; bottom: 12px; display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; font-family: var(--font-mono); font-size: .72rem; color: var(--muted); pointer-events: none; }
+.legend li { display: flex; align-items: center; gap: 8px; }
+.sw { width: 10px; height: 10px; display: inline-block; }
+.sw.aes { background: var(--aes); border-radius: 2px; }
+.sw.rsa { background: var(--rsa); border-radius: 50%; }
+
+/* buttons */
+.btn { appearance: none; font: inherit; font-weight: 500; font-size: .94rem; line-height: 1.2; padding: 11px 18px; border-radius: 10px; border: 1px solid transparent; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; color: var(--fg); background: transparent; }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.btn-aes { background: var(--aes); color: var(--on-aes); }
+.btn-rsa { background: var(--rsa); color: var(--on-rsa); }
+.btn-line { border-color: var(--line); background: var(--surface-2); }
+.btn-line:hover:not(:disabled) { border-color: var(--dim); }
+.btn-warn { border-color: color-mix(in srgb, var(--bad) 55%, var(--line)); color: var(--bad); }
+.btn-sm { padding: 7px 12px; font-size: .82rem; border-radius: 8px; }
+.spin { width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--line); border-top-color: var(--rsa); display: inline-block; animation: sp .8s linear infinite; vertical-align: -1px; }
+@keyframes sp { to { transform: rotate(360deg); } }
+
+/* section heads */
+.sec-head { display: grid; gap: 10px; margin-bottom: 26px; max-width: 64ch; }
+h2 { font-family: var(--font-display); font-weight: 600; font-size: clamp(1.45rem, 3.2vw, 2.1rem); line-height: 1.18; letter-spacing: -.02em; }
+.sub { color: var(--muted); }
+
+/* lab */
+.lab-grid { display: grid; gap: 20px; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 1000px) {
+  .lab-grid { grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr); }
+  .decrypt { grid-column: 1 / -1; }
+}
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: clamp(16px, 2.4vw, 26px); display: flex; flex-direction: column; gap: 22px; min-width: 0; }
+.block { display: grid; gap: 12px; min-width: 0; }
+.block + .block { border-top: 1px solid var(--line); padding-top: 22px; }
+h3 { font-family: var(--font-display); font-weight: 500; font-size: 1rem; letter-spacing: -.01em; }
+.hint { color: var(--muted); font-size: .86rem; }
+.row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
+legend { padding: 0; margin-bottom: 8px; font-family: var(--font-mono); font-size: .72rem; letter-spacing: .1em; text-transform: uppercase; color: var(--dim); }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--bg); }
+.seg label { position: relative; cursor: pointer; }
+.seg input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.seg span { display: block; padding: 8px 16px; font-family: var(--font-mono); font-size: .85rem; color: var(--muted); }
+.seg input:checked + span { background: var(--rsa); color: var(--on-rsa); }
+.seg input:focus-visible + span { outline: 2px solid var(--focus); outline-offset: -2px; }
+.status { font-family: var(--font-mono); font-size: .8rem; color: var(--muted); overflow-wrap: anywhere; }
+.status b { color: var(--fg); font-weight: 500; }
+textarea { width: 100%; min-height: 128px; resize: vertical; font: inherit; font-size: .96rem; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+.counter { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; font-family: var(--font-mono); font-size: .76rem; color: var(--muted); }
+.pill { border: 1px solid var(--line); border-radius: 999px; padding: 2px 10px; }
+.pill.warn { color: var(--aes); border-color: color-mix(in srgb, var(--aes) 55%, var(--line)); }
+
+.steps { list-style: none; margin: 0; padding: 0; }
+.step { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 4px 12px; align-items: baseline; padding: 12px 0; border-top: 1px solid var(--line); }
+.step:first-child { border-top: 0; padding-top: 0; }
+.chip { font-family: var(--font-mono); font-size: .66rem; letter-spacing: .08em; text-transform: uppercase; padding: 2px 7px; border: 1px solid currentColor; border-radius: 6px; color: var(--muted); }
+.chip.aes { color: var(--aes); }
+.chip.rsa { color: var(--rsa); }
+.lbl { font-weight: 500; font-size: .94rem; min-width: 0; }
+.lbl small { display: block; color: var(--dim); font-weight: 400; font-size: .76rem; }
+.meta { font-family: var(--font-mono); font-size: .74rem; color: var(--muted); white-space: nowrap; }
+.val { grid-column: 2 / 4; font-family: var(--font-mono); font-size: .78rem; color: var(--muted); overflow-wrap: anywhere; }
+.pkg-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.badge-bad { display: none; font-family: var(--font-mono); font-size: .7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--bad); border: 1px solid var(--bad); border-radius: 6px; padding: 2px 8px; margin-left: 10px; }
+.tampered .badge-bad { display: inline-block; }
+pre.box { margin: 0; max-height: 168px; overflow: auto; background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; font-size: .74rem; line-height: 1.55; color: var(--muted); white-space: pre-wrap; word-break: break-all; }
+.sizes { font-family: var(--font-mono); font-size: .78rem; color: var(--muted); }
+.sizes b { color: var(--fg); font-weight: 500; }
+
+.result { border: 1px solid var(--line); border-radius: 12px; padding: 16px; background: var(--bg); display: grid; gap: 10px; min-width: 0; }
+.result[data-state="ok"] { border-color: color-mix(in srgb, var(--ok) 60%, var(--line)); }
+.result[data-state="fail"] { border-color: color-mix(in srgb, var(--bad) 60%, var(--line)); }
+.r-status { font-weight: 600; }
+.result[data-state="ok"] .r-status { color: var(--ok); }
+.result[data-state="fail"] .r-status { color: var(--bad); }
+.r-status.idle { color: var(--muted); font-weight: 400; }
+.plain { margin: 0; padding: 10px 12px; background: var(--surface-2); border-radius: 8px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.plain:empty { display: none; }
+.r-meta { font-family: var(--font-mono); font-size: .76rem; color: var(--muted); overflow-wrap: anywhere; }
+
+/* algo */
+.flow { display: grid; grid-template-columns: minmax(0, 1fr); gap: 36px; }
+@media (min-width: 860px) { .flow { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 56px; } }
+.flow h3 { padding-bottom: 12px; border-bottom: 1px solid var(--line); margin-bottom: 4px; }
+.flow ol { list-style: none; margin: 0; padding: 0; counter-reset: s; }
+.flow li { counter-increment: s; display: grid; grid-template-columns: 2rem minmax(0, 1fr); gap: 0 10px; padding: 14px 0; border-bottom: 1px solid var(--line); }
+.flow li::before { content: counter(s); font-family: var(--font-mono); font-size: .8rem; color: var(--dim); padding-top: 3px; }
+.flow li > div { display: grid; gap: 6px; justify-items: start; min-width: 0; }
+.flow code { font-size: .86em; background: var(--surface-2); padding: 1px 6px; border-radius: 5px; }
+.wire { margin-top: 22px; font-family: var(--font-mono); font-size: .8rem; color: var(--muted); }
+
+/* compare */
+.tbl { overflow-x: auto; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+table { width: 100%; border-collapse: collapse; font-size: .92rem; }
+th, td { text-align: left; vertical-align: top; padding: 12px 16px; border-top: 1px solid var(--line); min-width: 9rem; }
+thead th { border-top: 0; font-family: var(--font-mono); font-size: .74rem; letter-spacing: .08em; text-transform: uppercase; font-weight: 500; }
+th[scope="row"] { font-weight: 500; color: var(--muted); min-width: 7rem; }
+th.c-aes { color: var(--aes); }
+th.c-rsa { color: var(--rsa); }
+.bench { margin-top: 28px; display: grid; gap: 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: clamp(16px, 2.4vw, 24px); }
+.bench-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+.bar-row { display: grid; grid-template-columns: minmax(0, 15rem) minmax(0, 1fr) 5.8rem; gap: 12px; align-items: center; }
+.bar-label { font-size: .88rem; }
+.track { height: 14px; border-radius: 7px; background: var(--surface-2); overflow: hidden; }
+.fill { height: 100%; width: 0; border-radius: 7px; transition: width .6s ease; }
+.fill.aes { background: var(--aes); }
+.fill.rsa { background: var(--rsa); }
+.bar-val { font-family: var(--font-mono); font-size: .8rem; text-align: right; font-variant-numeric: tabular-nums; }
+@media (max-width: 640px) {
+  .bar-row { grid-template-columns: minmax(0, 1fr) auto; gap: 6px 12px; }
+  .bar-label { grid-column: 1 / -1; }
+}
+
+.foot { color: var(--muted); font-size: .85rem; max-width: 70ch; }
+
+@media (max-width: 900px) {
+  .hero { grid-template-columns: minmax(0, 1fr); }
+  .stage { order: -1; aspect-ratio: auto; height: min(340px, 82vw); min-height: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+</style>
+
+<div class="wrap" id="top">
+  <header class="nav">
+    <a class="brand" href="#top" aria-label="Гибрид Сейф">
+      <svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true">
+        <rect x="3" y="3" width="13" height="13" rx="2" fill="none" stroke="var(--aes)" stroke-width="2"/>
+        <circle cx="16.5" cy="16.5" r="7" fill="none" stroke="var(--rsa)" stroke-width="2"/>
+      </svg>
+      Гибрид Сейф
+    </a>
+    <nav aria-label="Бөлімдер">
+      <a href="#lab">Зертхана</a>
+      <a href="#algo">Алгоритм</a>
+      <a href="#compare">Салыстыру</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero" aria-labelledby="h1">
+      <div class="hero-copy">
+        <p class="eyebrow">Гибридті криптография</p>
+        <h1 id="h1"><span class="a">AES</span> жылдамдығы. <span class="r">RSA</span> сенімділігі.</h1>
+        <p class="lede">Деректер AES-256-GCM арқылы шифрланады, ал оның кілтін алушының RSA ашық кілті орап қорғайды. Төмендегі зертханада бүкіл тізбекті өз хабарламаңызбен іске қосыңыз.</p>
+        <div class="cta">
+          <a class="btn btn-aes" href="#lab">Зертхананы ашу</a>
+          <a class="btn btn-line" href="#algo">Алгоритм сызбасы</a>
+        </div>
+        <dl class="specs">
+          <div><dt>Деректер</dt><dd>AES-256-GCM</dd></div>
+          <div><dt>Кілт алмасу</dt><dd>RSA-OAEP · SHA-256</dd></div>
+          <div><dt>Тұтастық</dt><dd>128 бит GCM тегі</dd></div>
+        </dl>
+      </div>
+      <div class="stage" id="stage" role="img" aria-label="3D көрініс: AES текшелер торы және оны айналатын RSA сақиналары мен кілттері">
+        <ul class="legend">
+          <li><i class="sw aes"></i>AES-256-GCM · деректер</li>
+          <li><i class="sw rsa"></i>RSA-OAEP · сессия кілті</li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="lab" aria-labelledby="h-lab">
+      <header class="sec-head">
+        <p class="eyebrow">Зертхана</p>
+        <h2 id="h-lab">Хабарламаны шифрлап көріңіз</h2>
+        <p class="sub">Барлық есептеу осы беттің ішінде, браузердің Web Crypto интерфейсімен орындалады. Ешқандай дерек серверге жіберілмейді.</p>
+      </header>
+
+      <div class="lab-grid">
+        <div class="panel inputs">
+          <div class="block">
+            <h3>Алушы: кілттер жұбы</h3>
+            <fieldset>
+              <legend>RSA модулінің өлшемі, бит</legend>
+              <div class="seg" role="radiogroup">
+                <label><input type="radio" name="bits" value="2048" id="b2048" checked><span>2048</span></label>
+                <label><input type="radio" name="bits" value="3072" id="b3072"><span>3072</span></label>
+                <label><input type="radio" name="bits" value="4096" id="b4096"><span>4096</span></label>
+              </div>
+            </fieldset>
+            <div class="row">
+              <button class="btn btn-rsa" id="btnKeys" type="button" disabled>Кілттерді жасау</button>
+            </div>
+            <p class="status" id="keyStatus" aria-live="polite"><span class="spin"></span> Іске қосылуда…</p>
+            <p class="hint">Жеке кілт экспортталмайды және тек осы беттің жадында тұрады.</p>
+          </div>
+
+          <div class="block">
+            <h3>Жіберуші: хабарлама</h3>
+            <label for="msg" class="hint">Ашық мәтін</label>
+            <textarea id="msg" spellcheck="false">Құпия хабарлама: №KZ-4471 келісімшарты 2026 жылғы 2 қарашада қол қойылды. Сомасы 1 250 000 ₸. Тек алушыға арналған.</textarea>
+            <div class="counter" id="counter"></div>
+            <div class="row">
+              <button class="btn btn-aes" id="btnEnc" type="button" disabled>Шифрлау</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel outputs" id="outPanel">
+          <div class="block">
+            <h3>Жіберуші: шифрлау тізбегі</h3>
+            <ol class="steps" id="steps" aria-live="polite">
+              <li class="step"><span class="chip">—</span><div class="lbl">Шифрлау күтілуде</div><span class="meta"></span></li>
+            </ol>
+          </div>
+          <div class="block">
+            <div class="pkg-head">
+              <h3>Желіге жіберілетін пакет<span class="badge-bad">бүлінген</span></h3>
+              <button class="btn btn-line btn-sm" id="btnCopyPkg" type="button">Көшіру</button>
+            </div>
+            <pre class="box" id="pkg" tabindex="0" aria-label="Пакет JSON">—</pre>
+            <p class="sizes" id="sizes"></p>
+          </div>
+        </div>
+
+        <div class="panel decrypt">
+          <div class="block">
+            <h3>Алушы: дешифрлеу</h3>
+            <p class="hint">Жеке кілт AES кілтін ашады, содан кейін GCM тегі тексеріледі. Шифрмәтіннің бір битін бүлдіріп, қорғаныс қалай жауап беретінін көріңіз.</p>
+            <div class="row">
+              <button class="btn btn-rsa" id="btnDec" type="button" disabled>Дешифрлеу</button>
+              <button class="btn btn-line btn-warn" id="btnTamper" type="button" disabled>Шифрмәтінді бүлдіру (1 бит)</button>
+              <button class="btn btn-line" id="btnRestore" type="button" disabled>Түпнұсқаны қалпына келтіру</button>
+            </div>
+            <div class="result" id="result" data-state="idle" aria-live="polite">
+              <p class="r-status idle" id="rStatus">Дешифрлеуді іске қосыңыз.</p>
+              <p class="plain" id="plain"></p>
+              <p class="r-meta" id="rMeta"></p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="algo" aria-labelledby="h-algo">
+      <header class="sec-head">
+        <p class="eyebrow">Алгоритм</p>
+        <h2 id="h-algo">Хабарлама жолы</h2>
+        <p class="sub">Жіберуші мен алушы бір-біріне жасырын ештеңе бермейді. Алушының ашық кілті ғана ортақ.</p>
+      </header>
+      <div class="flow">
+        <div>
+          <h3>Жіберуші</h3>
+          <ol>
+            <li><div><span class="chip rsa">RSA</span><span>Алушының ашық кілтін алу.</span></div></li>
+            <li><div><span class="chip">RNG</span><span>Жүйелік CSPRNG-мен 256 бит AES кілті мен 96 бит IV жасау.</span></div></li>
+            <li><div><span class="chip aes">AES</span><span>Нұсқа мен алгоритм атауын AAD ретінде байлап, AES-256-GCM-мен шифрлау. Шығыс: шифрмәтін және 128 бит тег.</span></div></li>
+            <li><div><span class="chip rsa">RSA</span><span>AES кілтін ашық кілтпен RSA-OAEP (SHA-256) арқылы орау.</span></div></li>
+            <li><div><span class="chip">Желі</span><span>Пакетті <code>{ ek, iv, ct }</code> жіберу. Ашық AES кілті жіберілмейді.</span></div></li>
+          </ol>
+        </div>
+        <div>
+          <h3>Алушы</h3>
+          <ol>
+            <li><div><span class="chip">Желі</span><span>Пакетті қабылдап, нұсқа мен алгоритм атауын оқу.</span></div></li>
+            <li><div><span class="chip rsa">RSA</span><span>Жеке кілтпен <code>ek</code> мәнін ашып, AES кілтін алу.</span></div></li>
+            <li><div><span class="chip aes">AES</span><span>AES-GCM-мен ашу. Тег немесе AAD сәйкес келмесе, ешқандай нәтиже қайтарылмайды.</span></div></li>
+            <li><div><span class="chip">Жад</span><span>AES кілтін жадтан нөлдеп өшіру.</span></div></li>
+          </ol>
+        </div>
+      </div>
+      <p class="wire">Желіден өтетін пакеттен кілтсіз ештеңе оқылмайды.</p>
+    </section>
+
+    <section id="compare" aria-labelledby="h-cmp">
+      <header class="sec-head">
+        <p class="eyebrow">Салыстыру</p>
+        <h2 id="h-cmp">Неге екі алгоритм қатар қолданылады</h2>
+        <p class="sub">RSA бір операцияда модуль өлшемінен кіші дерек қана шифрлай алады және AES-тен әлдеқайда баяу. AES үлкен көлемді жылдам өңдейді, бірақ екі жаққа ортақ кілт қажет. Гибрид екеуінің әлсіз жағын жабады.</p>
+      </header>
+      <div class="tbl">
+        <table>
+          <thead><tr><th></th><th class="c-aes">AES-256-GCM</th><th class="c-rsa">RSA-OAEP</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">Түрі</th><td>Симметриялық: бір ортақ кілт</td><td>Асимметриялық: ашық және жеке кілт</td></tr>
+            <tr><th scope="row">Кілт</th><td>256 бит</td><td>2048–4096 бит</td></tr>
+            <tr><th scope="row">Жылдамдық</th><td>Аппараттық AES-NI арқылы секундына гигабайттар</td><td>Әлдеқайда баяу, әсіресе жеке кілтпен ашуда</td></tr>
+            <tr><th scope="row">Бір операциядағы көлем</th><td>Бір хабарлама үшін шамамен 64 ГБ дейін</td><td>Модуль минус 66 байт: 190 / 318 / 446 Б</td></tr>
+            <tr><th scope="row">Міндеті</th><td>Деректерді шифрлау және тұтастықты тексеру</td><td>Сессия кілтін қауіпсіз жеткізу</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="bench">
+        <div class="bench-head">
+          <h3 id="benchTitle">Өлшеу: 32 КБ деректі шифрлап, қайта ашу</h3>
+          <button class="btn btn-line btn-sm" id="btnBench" type="button" disabled>Қайта өлшеу</button>
+        </div>
+        <div class="bar-row">
+          <span class="bar-label">AES-256-GCM, бір жолы</span>
+          <div class="track"><div class="fill aes" id="barAes"></div></div>
+          <span class="bar-val" id="valAes">—</span>
+        </div>
+        <div class="bar-row">
+          <span class="bar-label" id="lblRsa">Тек RSA-OAEP, бөліктермен</span>
+          <div class="track"><div class="fill rsa" id="barRsa"></div></div>
+          <span class="bar-val" id="valRsa">—</span>
+        </div>
+        <p class="hint" id="benchNote">Өлшеу іске қосылуда…</p>
+      </div>
+    </section>
+
+    <p class="foot">Оқу демосы. Нақты жүйеде жеке кілттерді HSM немесе KMS ішінде сақтап, кілттерді мерзімді ауыстырып отырыңыз.</p>
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const tok = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+/* ================= 3D сахна ================= */
+(function scene() {
+  const host = $('stage');
+  if (!window.THREE) { host.classList.add('nogl'); return; }
+  let renderer;
+  try { renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'low-power' }); }
+  catch (e) { host.classList.add('nogl'); return; }
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.setClearColor(0x000000, 0);
+  host.insertBefore(renderer.domElement, host.firstChild);
+
+  const sc = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 100);
+  const world = new THREE.Group();
+  sc.add(world);
+
+  const mAes = new THREE.LineBasicMaterial({ transparent: true, opacity: 0.95 });
+  const mAesFill = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.1, depthWrite: false });
+  const mRing = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.55 });
+  const mKey = new THREE.MeshBasicMaterial();
+  const mCord = new THREE.LineBasicMaterial({ transparent: true, opacity: 0.5 });
+  const mPts = new THREE.PointsMaterial({ size: 0.05, transparent: true, opacity: 0.75, sizeAttenuation: true });
+  function applyTheme() {
+    mAes.color.set(tok('--aes')); mAesFill.color.set(tok('--aes'));
+    mRing.color.set(tok('--rsa')); mKey.color.set(tok('--rsa')); mCord.color.set(tok('--rsa'));
+    mPts.color.set(tok('--dim'));
+  }
+  applyTheme();
+
+  // AES: 3x3x3 текше торы
+  const core = new THREE.Group();
+  world.add(core);
+  const boxGeo = new THREE.BoxGeometry(0.62, 0.62, 0.62);
+  const edgeGeo = new THREE.EdgesGeometry(boxGeo);
+  const cubes = [];
+  for (let x = -1; x <= 1; x++) for (let y = -1; y <= 1; y++) for (let z = -1; z <= 1; z++) {
+    const g = new THREE.Group();
+    g.add(new THREE.LineSegments(edgeGeo, mAes), new THREE.Mesh(boxGeo, mAesFill));
+    g.position.set(x * 0.78, y * 0.78, z * 0.78);
+    g.userData.ph = (x + y + z) * 0.9;
+    core.add(g); cubes.push(g);
+  }
+
+  // RSA: екі сақина, ашық кілт (шар) пен жеке кілт (октаэдр)
+  const RA = 3.2, RB = 3.8;
+  function ring(radius, rot) {
+    const pivot = new THREE.Group();
+    pivot.rotation.set(rot[0], rot[1], rot[2]);
+    pivot.add(new THREE.Mesh(new THREE.TorusGeometry(radius, 0.018, 8, 180), mRing));
+    world.add(pivot);
+    return pivot;
+  }
+  const pivA = ring(RA, [1.15, 0.35, 0]);
+  const pivB = ring(RB, [-0.6, -0.5, 0.8]);
+  const pub = new THREE.Mesh(new THREE.SphereGeometry(0.2, 24, 16), mKey);
+  const priv = new THREE.Mesh(new THREE.OctahedronGeometry(0.3), mKey);
+  pivA.add(pub); pivB.add(priv);
+
+  function cord() {
+    const g = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
+    const l = new THREE.Line(g, mCord); l.frustumCulled = false; sc.add(l); return l;
+  }
+  const cordA = cord(), cordB = cord();
+  const tmp = new THREE.Vector3();
+  function updCord(line, obj) {
+    obj.getWorldPosition(tmp);
+    const a = line.geometry.attributes.position;
+    a.setXYZ(1, tmp.x, tmp.y, tmp.z); a.needsUpdate = true;
+  }
+
+  // бөлшектер қабығы
+  const N = 520, pos = new Float32Array(N * 3);
+  for (let i = 0; i < N; i++) {
+    const r = 4.4 + Math.random() * 3.2, th = Math.random() * Math.PI * 2, ph = Math.acos(2 * Math.random() - 1);
+    pos[i * 3] = r * Math.sin(ph) * Math.cos(th); pos[i * 3 + 1] = r * Math.sin(ph) * Math.sin(th); pos[i * 3 + 2] = r * Math.cos(ph);
+  }
+  const pg = new THREE.BufferGeometry();
+  pg.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  const pts = new THREE.Points(pg, mPts);
+  sc.add(pts);
+
+  let px = 0, py = 0;
+  host.addEventListener('pointermove', e => {
+    const r = host.getBoundingClientRect();
+    px = ((e.clientX - r.left) / r.width - 0.5) * 2; py = ((e.clientY - r.top) / r.height - 0.5) * 2;
+  });
+  host.addEventListener('pointerleave', () => { px = 0; py = 0; });
+
+  function frame(t) {
+    core.rotation.y = t * 0.28; core.rotation.x = 0.4 + Math.sin(t * 0.3) * 0.15;
+    for (const c of cubes) c.scale.setScalar(0.74 + 0.26 * (0.5 + 0.5 * Math.sin(t * 1.5 + c.userData.ph)));
+    pub.position.set(Math.cos(t * 0.5) * RA, Math.sin(t * 0.5) * RA, 0);
+    priv.position.set(Math.cos(2 - t * 0.38) * RB, Math.sin(2 - t * 0.38) * RB, 0);
+    priv.rotation.x = t; priv.rotation.y = t * 0.7;
+    pivA.rotation.y = 0.35 + Math.sin(t * 0.2) * 0.15;
+    pivB.rotation.x = -0.6 + Math.sin(t * 0.17) * 0.12;
+    pts.rotation.y = t * 0.02;
+    world.rotation.y += (px * 0.5 - world.rotation.y) * 0.05;
+    world.rotation.x += (py * 0.3 - world.rotation.x) * 0.05;
+    sc.updateMatrixWorld(true);
+    updCord(cordA, pub); updCord(cordB, priv);
+    renderer.render(sc, camera);
+  }
+
+  function resize() {
+    const w = host.clientWidth, h = host.clientHeight;
+    if (!w || !h) return;
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h;
+    camera.position.set(0, 0.4, 11 * Math.max(1, 1.15 / camera.aspect));
+    camera.lookAt(0, 0, 0);
+    camera.updateProjectionMatrix();
+    if (!running) frame(1.2);
+  }
+
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let raf = 0, running = false, visible = true;
+  function loop(ms) { frame(ms / 1000); raf = requestAnimationFrame(loop); }
+  function start() { if (reduce || running || !visible || document.hidden) return; running = true; raf = requestAnimationFrame(loop); }
+  function stop() { running = false; cancelAnimationFrame(raf); }
+
+  new ResizeObserver(resize).observe(host);
+  new IntersectionObserver(es => { visible = es[0].isIntersecting; visible ? start() : stop(); }).observe(host);
+  document.addEventListener('visibilitychange', () => document.hidden ? stop() : start());
+  const onTheme = () => { applyTheme(); if (!running) frame(1.2); };
+  new MutationObserver(onTheme).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', onTheme);
+  resize();
+  start();
+})();
+
+/* ================= Гибридті криптография ================= */
+const enc = new TextEncoder(), dec = new TextDecoder();
+const HDR_V = 'GS1', HDR_ALG = 'RSA-OAEP-256+AES-256-GCM';
+
+async function aesSeal(bytes, aad) {
+  // 256 бит кілт пен 96 бит IV: жүйелік CSPRNG
+  const key = await crypto.subtle.generateKey({ name: 'AES-GCM', length: 256 }, true, ['encrypt']);
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const sealed = await crypto.subtle.encrypt({ name: 'AES-GCM', iv, additionalData: aad, tagLength: 128 }, key, bytes);
+  const raw = new Uint8Array(await crypto.subtle.exportKey('raw', key));
+  return { raw, iv, ct: new Uint8Array(sealed) }; // ct = шифрмәтін + 16 байт тег
+}
+
+async function rsaWrap(publicKey, raw) {
+  // AES кілтін алушының ашық кілтімен орау
+  return new Uint8Array(await crypto.subtle.encrypt({ name: 'RSA-OAEP' }, publicKey, raw));
+}
+
+async function rsaUnwrap(privateKey, ek) {
+  // Жеке кілтпен AES кілтін қайтару
+  return new Uint8Array(await crypto.subtle.decrypt({ name: 'RSA-OAEP' }, privateKey, ek));
+}
+
+async function aesOpen(raw, iv, ct, aad) {
+  // Тег немесе AAD сәйкес келмесе, decrypt қате береді
+  const key = await crypto.subtle.importKey('raw', raw, 'AES-GCM', false, ['decrypt']);
+  return new Uint8Array(await crypto.subtle.decrypt({ name: 'AES-GCM', iv, additionalData: aad, tagLength: 128 }, key, ct));
+}
+
+const b64 = u8 => { let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); };
+const unb64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+const hex = u8 => Array.from(u8, b => b.toString(16).padStart(2, '0')).join('');
+const sha256hex = async u8 => hex(new Uint8Array(await crypto.subtle.digest('SHA-256', u8)));
+const fmt = ms => (ms < 10 ? ms.toFixed(2) : ms < 100 ? ms.toFixed(1) : ms.toFixed(0)) + ' мс';
+const cut = (s, head, tail) => s.length > head + tail + 1 ? s.slice(0, head) + '…' + (tail ? s.slice(-tail) : '') : s;
+const rsaMax = bits => bits / 8 - 66;
+
+const S = { pub: null, priv: null, bits: 2048, orig: null, pkg: null, tampered: false, busy: false, plainHash: '', benchStale: false };
+
+function syncButtons() {
+  const hasKeys = !!S.priv, hasPkg = !!S.pkg;
+  $('btnKeys').disabled = S.busy;
+  $('btnEnc').disabled = S.busy || !hasKeys;
+  $('btnDec').disabled = S.busy || !hasPkg;
+  $('btnTamper').disabled = S.busy || !hasPkg || S.tampered;
+  $('btnRestore').disabled = S.busy || !hasPkg || !S.tampered;
+  $('btnBench').disabled = S.busy || !hasKeys;
+}
+function setBusy(b) { S.busy = b; syncButtons(); }
+
+function updateCounter() {
+  const n = enc.encode($('msg').value).length, max = rsaMax(S.bits);
+  const over = n > max;
+  $('counter').innerHTML = `<span>UTF-8: ${n} Б</span><span class="pill${over ? ' warn' : ''}">${over ? 'RSA жалғыз өзі жетпейді, гибрид қажет' : 'RSA жалғыз өзі шегі: ' + max + ' Б'}</span>`;
+}
+
+async function genKeys() {
+  const bits = +document.querySelector('input[name="bits"]:checked').value;
+  setBusy(true);
+  $('keyStatus').innerHTML = `<span class="spin"></span> RSA-${bits} кілттер жұбы жасалуда…`;
+  await new Promise(r => setTimeout(r, 30));
+  const t = performance.now();
+  const pair = await crypto.subtle.generateKey({ name: 'RSA-OAEP', modulusLength: bits, publicExponent: new Uint8Array([1, 0, 1]), hash: 'SHA-256' }, false, ['encrypt', 'decrypt']);
+  const ms = performance.now() - t;
+  const spki = await crypto.subtle.exportKey('spki', pair.publicKey);
+  const d = new Uint8Array(await crypto.subtle.digest('SHA-256', spki));
+  const fp = Array.from(d.slice(0, 8), b => b.toString(16).padStart(2, '0').toUpperCase()).join(':');
+  S.pub = pair.publicKey; S.priv = pair.privateKey; S.bits = bits;
+  S.orig = null; S.pkg = null; S.tampered = false;
+  $('keyStatus').innerHTML = `<b>RSA-${bits}</b> · ${fmt(ms)} · ашық кілт іздері: <b>${fp}</b>`;
+  updateCounter();
+  setBusy(false);
+}
+
+function renderSteps(d) {
+  const row = (kind, tag, label, sub, val, meta) =>
+    `<li class="step"><span class="chip ${kind}">${tag}</span><div class="lbl">${label}<small>${sub}</small></div><span class="meta">${meta}</span><code class="val">${val}</code></li>`;
+  $('steps').innerHTML = [
+    row('', 'SHA', 'Бақылау қосындысы', 'SHA-256, ашық мәтіннен', cut(d.hash, 40, 8), '32 Б'),
+    row('aes', 'AES', 'Сессия кілті', 'CSPRNG, әр хабарлама үшін жаңа', cut(d.keyHex, 32, 8), '32 Б'),
+    row('aes', 'AES', 'IV (nonce)', 'бір кілтпен қайталанбайды', d.ivHex, '12 Б'),
+    row('aes', 'AES', 'AES-256-GCM шифрмәтіні', 'AAD: ' + HDR_V + ' | ' + HDR_ALG, cut(d.bodyHex, 48, 8), d.bodyLen + ' Б · ' + fmt(d.tAes)),
+    row('aes', 'AES', 'GCM аутентификация тегі', '128 бит, тұтастықты қорғайды', d.tagHex, '16 Б'),
+    row('rsa', 'RSA', 'Оралған AES кілті (ek)', 'RSA-OAEP, SHA-256', cut(d.ekB64, 40, 8), d.ekLen + ' Б · ' + fmt(d.tRsa))
+  ].join('');
+}
+
+function refreshPkg() {
+  $('pkg').textContent = JSON.stringify(S.pkg, null, 2);
+  $('outPanel').classList.toggle('tampered', S.tampered);
+  const total = enc.encode(JSON.stringify(S.pkg)).length;
+  const plain = S.plainLen;
+  $('sizes').innerHTML = `Ашық мәтін <b>${plain} Б</b> → пакет <b>${total} Б</b> (үстеме ${total - plain} Б, негізінен RSA кілті)`;
+  syncButtons();
+}
+
+function setResult(state, status, plain, meta) {
+  const r = $('result');
+  r.dataset.state = state;
+  $('rStatus').className = 'r-status' + (state === 'idle' ? ' idle' : '');
+  $('rStatus').textContent = status;
+  $('plain').textContent = plain || '';
+  $('rMeta').textContent = meta || '';
+}
+
+async function runEncrypt() {
+  const text = $('msg').value;
+  if (!text.trim()) { setResult('fail', 'Хабарлама бос. Мәтін енгізіңіз.', '', ''); return; }
+  setBusy(true);
+  try {
+    const bytes = enc.encode(text);
+    const aad = enc.encode(HDR_V + '|' + HDR_ALG);
+    const hash = await sha256hex(bytes);
+    let t = performance.now();
+    const { raw, iv, ct } = await aesSeal(bytes, aad);
+    const tAes = performance.now() - t;
+    t = performance.now();
+    const ek = await rsaWrap(S.pub, raw);
+    const tRsa = performance.now() - t;
+    const keyHex = hex(raw);
+    raw.fill(0);
+    const body = ct.slice(0, -16), tag = ct.slice(-16);
+    S.orig = { v: HDR_V, alg: HDR_ALG, ek: b64(ek), iv: b64(iv), ct: b64(ct) };
+    S.pkg = { ...S.orig };
+    S.tampered = false; S.plainHash = hash; S.plainLen = bytes.length;
+    renderSteps({ hash, keyHex, ivHex: hex(iv), bodyHex: hex(body), bodyLen: body.length, tagHex: hex(tag), ekB64: S.orig.ek, ekLen: ek.length, tAes, tRsa });
+    refreshPkg();
+    setResult('idle', 'Пакет дайын. Дешифрлеуді іске қосыңыз.', '', '');
+  } catch (e) {
+    setResult('fail', 'Шифрлау орындалмады: ' + (e && e.message ? e.message : e), '', '');
+  } finally { setBusy(false); }
+}
+
+async function runDecrypt() {
+  if (!S.pkg) return;
+  setBusy(true);
+  const aad = enc.encode(S.pkg.v + '|' + S.pkg.alg);
+  let raw, tR = 0;
+  try {
+    let t = performance.now();
+    try { raw = await rsaUnwrap(S.priv, unb64(S.pkg.ek)); }
+    catch (e) { setResult('fail', 'RSA жеке кілті AES кілтін аша алмады.', '', ''); return; }
+    tR = performance.now() - t;
+    t = performance.now();
+    try {
+      const pt = await aesOpen(raw, unb64(S.pkg.iv), unb64(S.pkg.ct), aad);
+      const tA = performance.now() - t;
+      const h = await sha256hex(pt);
+      const same = h === S.plainHash;
+      setResult(same ? 'ok' : 'fail',
+        same ? 'Тұтастық расталды, дешифрлеу сәтті.' : 'Дешифрленді, бірақ SHA-256 сәйкес келмейді.',
+        dec.decode(pt),
+        `RSA ашу ${fmt(tR)} · AES ашу ${fmt(tA)} · SHA-256 ${same ? 'сәйкес' : 'сәйкес емес'}: ${cut(h, 12, 6)}`);
+    } catch (e) {
+      setResult('fail', 'Дешифрлеу тоқтатылды: GCM аутентификация тегі сәйкес келмеді.',
+        '', `RSA ашу ${fmt(tR)} · Шифрмәтін өзгертілген, нәтиже қайтарылмады.`);
+    }
+  } finally { if (raw) raw.fill(0); setBusy(false); }
+}
+
+function tamper() {
+  if (!S.pkg || S.tampered) return;
+  const ct = unb64(S.pkg.ct); ct[0] ^= 1;
+  S.pkg = { ...S.pkg, ct: b64(ct) };
+  S.tampered = true;
+  refreshPkg();
+  setResult('idle', 'Шифрмәтіннің бір биті өзгертілді. Енді дешифрлеңіз.', '', '');
+}
+function restore() {
+  if (!S.orig) return;
+  S.pkg = { ...S.orig }; S.tampered = false;
+  refreshPkg();
+  setResult('idle', 'Түпнұсқа пакет қалпына келтірілді.', '', '');
+}
+
+async function runBench() {
+  if (!S.priv) return;
+  setBusy(true);
+  const SIZE = 32768, chunk = rsaMax(S.bits), n = Math.ceil(SIZE / chunk);
+  $('lblRsa').textContent = `Тек RSA-OAEP, ${chunk} Б бөліктермен (${n} бөлік)`;
+  $('benchNote').textContent = 'Өлшеу жүріп жатыр…';
+  $('valAes').textContent = '…'; $('valRsa').textContent = '…';
+  await new Promise(r => setTimeout(r, 30));
+  try {
+    const data = new Uint8Array(SIZE);
+    for (let i = 0; i < SIZE; i += 65536) crypto.getRandomValues(data.subarray(i, Math.min(i + 65536, SIZE)));
+    const aad = enc.encode('bench');
+    let t = performance.now();
+    const s = await aesSeal(data, aad);
+    await aesOpen(s.raw, s.iv, s.ct, aad);
+    const aesMs = performance.now() - t;
+    $('valAes').textContent = fmt(aesMs);
+    t = performance.now();
+    for (let i = 0; i < n; i++) {
+      const w = await rsaWrap(S.pub, data.subarray(i * chunk, (i + 1) * chunk));
+      await rsaUnwrap(S.priv, w);
+      if (i % 20 === 19) $('valRsa').textContent = Math.round((i + 1) / n * 100) + '%';
+    }
+    const rsaMs = performance.now() - t;
+    const max = Math.max(aesMs, rsaMs);
+    $('barAes').style.width = Math.max(1.2, aesMs / max * 100) + '%';
+    $('barRsa').style.width = Math.max(1.2, rsaMs / max * 100) + '%';
+    $('valRsa').textContent = fmt(rsaMs);
+    const ratio = rsaMs / Math.max(aesMs, 0.05);
+    $('benchNote').textContent = `Осы құрылғыда AES-GCM RSA-OAEP-тен шамамен ${ratio >= 10 ? Math.round(ratio) : ratio.toFixed(1)} есе жылдам. Гибрид схемада RSA тек 32 байттық кілтке ғана жұмыс істейді.`;
+  } catch (e) {
+    $('benchNote').textContent = 'Өлшеу орындалмады: ' + (e && e.message ? e.message : e);
+  } finally { setBusy(false); }
+}
+
+async function copyText(text, btn, src) {
+  const old = btn.textContent;
+  try { await navigator.clipboard.writeText(text); btn.textContent = 'Көшірілді'; }
+  catch (e) {
+    try { const r = document.createRange(); r.selectNodeContents(src); const s = getSelection(); s.removeAllRanges(); s.addRange(r); } catch (_) {}
+    btn.textContent = 'Белгіленді';
+  }
+  setTimeout(() => { btn.textContent = old; }, 1600);
+}
+
+$('msg').addEventListener('input', updateCounter);
+$('btnKeys').addEventListener('click', async () => {
+  try {
+    await genKeys();
+    await runEncrypt();
+    S.benchStale = true;
+    $('benchNote').textContent = 'Кілт өзгерді. Нәтижені жаңарту үшін қайта өлшеңіз.';
+  } catch (e) { $('keyStatus').textContent = 'Кілт жасалмады: ' + (e && e.message ? e.message : e); setBusy(false); }
+});
+$('btnEnc').addEventListener('click', runEncrypt);
+$('btnDec').addEventListener('click', runDecrypt);
+$('btnTamper').addEventListener('click', tamper);
+$('btnRestore').addEventListener('click', restore);
+$('btnBench').addEventListener('click', runBench);
+$('btnCopyPkg').addEventListener('click', e => copyText($('pkg').textContent, e.currentTarget, $('pkg')));
+
+(async function init() {
+  updateCounter();
+  if (!(window.crypto && crypto.subtle)) {
+    $('keyStatus').textContent = 'Бұл браузерде Web Crypto қолжетімсіз. Қауіпсіз (https) контекст қажет.';
+    return;
+  }
+  try {
+    await genKeys();
+    await runEncrypt();
+    await runDecrypt();
+    await runBench();
+  } catch (e) {
+    $('keyStatus').textContent = 'Іске қосу кезінде қате: ' + (e && e.message ? e.message : e);
+    setBusy(false);
+  }
+})();
+</script>
+
+</body></html>
